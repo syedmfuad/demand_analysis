@@ -1,0 +1,159 @@
+data <- read.csv("data.csv")
+
+data$exp <- data$p1*data$q1 + data$p2*data$q2 + data$p3*data$q3 + data$p4*data$q4 + data$p5*data$q5
+
+data$w1 <- data$p1*data$q1/data$exp
+data$w2 <- data$p2*data$q2/data$exp
+data$w3 <- data$p3*data$q3/data$exp
+data$w4 <- data$p4*data$q4/data$exp
+data$w5 <- data$p5*data$q5/data$exp
+
+model1 <- lm(log(q1) ~ log(p1) + log(p2) + log(p3) + log(p4) + log(p5) + log(exp), data=data)
+summary(model1)
+
+model2 <- lm(log(q2) ~ log(p1) + log(p2) + log(p3) + log(p4) + log(p5) + log(exp), data=data)
+summary(model2)
+
+model3 <- lm(log(q3) ~ log(p1) + log(p2) + log(p3) + log(p4) + log(p5) + log(exp), data=data)
+summary(model3)
+
+model4 <- lm(log(q4) ~ log(p1) + log(p2) + log(p3) + log(p4) + log(p5) + log(exp), data=data)
+summary(model4)
+
+model5 <- lm(log(q5) ~ log(p1) + log(p2) + log(p3) + log(p4) + log(p5) + log(exp), data=data)
+summary(model5)
+
+#install.packages("micEconAids")
+
+library(micEconAids)
+
+pmeans <- colMeans(data[,c("p1", "p2", "p3", "p4", "p5")])
+wmeans <- colMeans(data[,c("w1", "w2", "w3", "w4", "w5")])
+expmean <- mean(data[,"exp"])
+
+#LA AIDS Model
+
+la_aids <- aidsEst(c("p1","p2","p3","p4","p5"), c("w1","w2","w3","w4","w5"), "exp", data=data, priceIndex = "S")
+summary(la_aids)
+
+la_aids_elast1 <- elas(la_aids, method="EU")
+la_aids_elast1
+
+la_aids_elast2 <- elas(la_aids, method="B1")
+la_aids_elast2
+
+la_aids_elast3 <- elas(la_aids, method="B2")
+la_aids_elast3
+
+la_aids_elast4 <- elas(la_aids, method="Go")
+la_aids_elast4
+
+lal_aids <- aidsEst(c("p1","p2","p3","p4","p5"), c("w1","w2","w3","w4","w5"), "exp", data=data, priceIndex = "SL")
+summary(lal_aids)
+
+#Full AIDS
+
+full_aids <- aidsEst(c("p1","p2","p3","p4","p5"), c("w1","w2","w3","w4","w5"), "exp", data=data, method = "IL")
+summary(full_aids)
+
+price_aids_elast <- aidsElas(coef(full_aids), prices = pmeans, shares = wmeans)
+price_aids_elast
+
+aids_elast_full <- aidsElas(coef(full_aids), prices = pmeans, shares = wmeans, totExp = expmean, coefCov=vcov(full_aids), 
+                            df=df.residual(full_aids))
+summary(aids_elast_full)
+
+
+#System fit #QAIDS
+
+install.packages("systemfit")
+library(systemfit)
+data$S <- data$w1*log(data$p1) + data$w2*log(data$p2) + data$w3*log(data$p3) + data$w4*log(data$p4) + data$w5*log(data$p5)
+
+product1 <- w1 ~ a1 + g11*log(p1) + g12*log(p2) + g13*log(p3) + g14*log(p4) + g15*log(p5) + b1*(log(exp) - S)
+product2 <- w2 ~ a2 + g21*log(p1) + g22*log(p2) + g23*log(p3) + g24*log(p4) + g25*log(p5) + b2*(log(exp) - S)
+product3 <- w3 ~ a3 + g31*log(p1) + g32*log(p2) + g33*log(p3) + g34*log(p4) + g35*log(p5) + b3*(log(exp) - S)
+product4 <- w4 ~ a4 + g41*log(p1) + g42*log(p2) + g43*log(p3) + g44*log(p4) + g45*log(p5) + b4*(log(exp) - S)
+product5 <- w5 ~ a5 + g51*log(p1) + g52*log(p2) + g53*log(p3) + g54*log(p4) + g55*log(p5) + b5*(log(exp) - S)
+
+a_p <- ~ a1*log(p1) + a2*log(p2) + a3*log(p3) + a4*log(p4) + a5*log(p5) + 0.5*(g11*log(p1)*log(p1) + g12*log(p1)*log(p2) + 
+         g13*log(p1)*log(p3) + g14*log(p1)*log(p4) + g15*log(p1)*log(p5) + g21*log(p2)*log(p1) + g22*log(p2)*log(p2) + 
+         g23*log(p2)*log(p3) + g24*log(p2)*log(p4) + g25*log(p2)*log(p5) + g31*log(p3)*log(p1) + g32*log(p3)*log(p2) + 
+         g33*log(p3)*log(p3) + g34*log(p3)*log(p4) + g35*log(p3)*log(p5) + g41*log(p4)*log(p1) + g42*log(p4)*log(p2) + 
+         g43*log(p4)*log(p3) + g44*log(p4)*log(p4) + g45*log(p4)*log(p5) + g51*log(p5)*log(p1) + g52*log(p5)*log(p2) + 
+         g53*log(p5)*log(p3) + g54*log(p5)*log(p4) + g55*log(p5)*log(p5))
+
+b_p <- ~ (p1^b1)*(p2^b2)*(p3^b3)*(p4^b4)*(p5^b5)
+
+lambda <- ~ l1*log(p1) + l2*log(p2) + l3*log(p3) + l4*log(p4) + l5*log(p5)
+
+startvalues <- c(a1=0, g11=0, g12=0, g13=0, g14=0, g15=0, b1=0,
+                 a2=0, g21=0, g22=0, g23=0, g24=0, g25=0, b2=0,
+                 a3=0, g31=0, g32=0, g33=0, g34=0, g35=0, b3=0,
+                 a4=0, g41=0, g42=0, g43=0, g44=0, g45=0, b4=0,
+                 a5=0, g51=0, g52=0, g53=0, g54=0, g55=0, b5=0)
+                 #l1=0, l2=0, l3=0, l4=0, l5=0)
+
+startvalues <- c(a1=0.1, g11=0.1, g12=0.1, g13=0.1, g14=0.1, g15=0.1, b1=0.1,
+                 a2=0.1, g21=0.1, g22=0.1, g23=0.1, g24=0.1, g25=0.1, b2=0.1,
+                 a3=0.1, g31=0.1, g32=0.1, g33=0.1, g34=0.1, g35=0.1, b3=0.1,
+                 a4=0.1, g41=0.1, g42=0.1, g43=0.1, g44=0.1, g45=0.1, b4=0.1,
+                 a5=0.1, g51=0.1, g52=0.1, g53=0.1, g54=0.1, g55=0.1, b5=0.1)
+
+model <- list(product1, product2, product3, product4, product5)
+ols_model <- nlsystemfit("SUR", model, data=data, startvals=startvalues)
+ols_model$b
+ols_model$covb
+
+
+#System fit #Full AIDS
+
+install.packages("systemfit")
+library(systemfit)
+data$S <- data$w1*log(data$p1) + data$w2*log(data$p2) + data$w3*log(data$p3) + data$w4*log(data$p4) + data$w5*log(data$p5)
+
+fproduct1 <- w1 ~ a1 + g11*log(p1) + g12*log(p2) + g13*log(p3) + g14*log(p4) + g15*log(p5) + b1*(log(exp) - a1*log(p1) + a2*log(p2) + a3*log(p3) + a4*log(p4) + a5*log(p5) + 
+                       0.5*(g11*log(p1)*log(p1) + g12*log(p1)*log(p2) + 
+                       g13*log(p1)*log(p3) + g14*log(p1)*log(p4) + g15*log(p1)*log(p5) + g21*log(p2)*log(p1) + g22*log(p2)*log(p2) + 
+                       g23*log(p2)*log(p3) + g24*log(p2)*log(p4) + g25*log(p2)*log(p5) + g31*log(p3)*log(p1) + g32*log(p3)*log(p2) + 
+                       g33*log(p3)*log(p3) + g34*log(p3)*log(p4) + g35*log(p3)*log(p5) + g41*log(p4)*log(p1) + g42*log(p4)*log(p2) + 
+                       g43*log(p4)*log(p3) + g44*log(p4)*log(p4) + g45*log(p4)*log(p5) + g51*log(p5)*log(p1) + g52*log(p5)*log(p2) + 
+                       g53*log(p5)*log(p3) + g54*log(p5)*log(p4) + g55*log(p5)*log(p5)))
+fproduct2 <- w2 ~ a2 + g21*log(p1) + g22*log(p2) + g23*log(p3) + g24*log(p4) + g25*log(p5) + b2*(log(exp) - a1*log(p1) + a2*log(p2) + a3*log(p3) + a4*log(p4) + a5*log(p5) + 
+                       0.5*(g11*log(p1)*log(p1) + g12*log(p1)*log(p2) + 
+                       g13*log(p1)*log(p3) + g14*log(p1)*log(p4) + g15*log(p1)*log(p5) + g21*log(p2)*log(p1) + g22*log(p2)*log(p2) + 
+                       g23*log(p2)*log(p3) + g24*log(p2)*log(p4) + g25*log(p2)*log(p5) + g31*log(p3)*log(p1) + g32*log(p3)*log(p2) + 
+                       g33*log(p3)*log(p3) + g34*log(p3)*log(p4) + g35*log(p3)*log(p5) + g41*log(p4)*log(p1) + g42*log(p4)*log(p2) + 
+                       g43*log(p4)*log(p3) + g44*log(p4)*log(p4) + g45*log(p4)*log(p5) + g51*log(p5)*log(p1) + g52*log(p5)*log(p2) + 
+                       g53*log(p5)*log(p3) + g54*log(p5)*log(p4) + g55*log(p5)*log(p5)))
+fproduct3 <- w3 ~ a3 + g31*log(p1) + g32*log(p2) + g33*log(p3) + g34*log(p4) + g35*log(p5) + b3*(log(exp) - a1*log(p1) + a2*log(p2) + a3*log(p3) + a4*log(p4) + a5*log(p5) + 
+                       0.5*(g11*log(p1)*log(p1) + g12*log(p1)*log(p2) + 
+                       g13*log(p1)*log(p3) + g14*log(p1)*log(p4) + g15*log(p1)*log(p5) + g21*log(p2)*log(p1) + g22*log(p2)*log(p2) + 
+                       g23*log(p2)*log(p3) + g24*log(p2)*log(p4) + g25*log(p2)*log(p5) + g31*log(p3)*log(p1) + g32*log(p3)*log(p2) + 
+                       g33*log(p3)*log(p3) + g34*log(p3)*log(p4) + g35*log(p3)*log(p5) + g41*log(p4)*log(p1) + g42*log(p4)*log(p2) + 
+                       g43*log(p4)*log(p3) + g44*log(p4)*log(p4) + g45*log(p4)*log(p5) + g51*log(p5)*log(p1) + g52*log(p5)*log(p2) + 
+                       g53*log(p5)*log(p3) + g54*log(p5)*log(p4) + g55*log(p5)*log(p5)))
+fproduct4 <- w4 ~ a4 + g41*log(p1) + g42*log(p2) + g43*log(p3) + g44*log(p4) + g45*log(p5) + b4*(log(exp) - a1*log(p1) + a2*log(p2) + a3*log(p3) + a4*log(p4) + a5*log(p5) + 
+                       0.5*(g11*log(p1)*log(p1) + g12*log(p1)*log(p2) + 
+                       g13*log(p1)*log(p3) + g14*log(p1)*log(p4) + g15*log(p1)*log(p5) + g21*log(p2)*log(p1) + g22*log(p2)*log(p2) + 
+                       g23*log(p2)*log(p3) + g24*log(p2)*log(p4) + g25*log(p2)*log(p5) + g31*log(p3)*log(p1) + g32*log(p3)*log(p2) + 
+                       g33*log(p3)*log(p3) + g34*log(p3)*log(p4) + g35*log(p3)*log(p5) + g41*log(p4)*log(p1) + g42*log(p4)*log(p2) + 
+                       g43*log(p4)*log(p3) + g44*log(p4)*log(p4) + g45*log(p4)*log(p5) + g51*log(p5)*log(p1) + g52*log(p5)*log(p2) + 
+                       g53*log(p5)*log(p3) + g54*log(p5)*log(p4) + g55*log(p5)*log(p5)))
+fproduct5 <- w5 ~ a5 + g51*log(p1) + g52*log(p2) + g53*log(p3) + g54*log(p4) + g55*log(p5) + b5*(log(exp) - a1*log(p1) + a2*log(p2) + a3*log(p3) + a4*log(p4) + a5*log(p5) +  
+                       0.5*(g11*log(p1)*log(p1) + g12*log(p1)*log(p2) + 
+                       g13*log(p1)*log(p3) + g14*log(p1)*log(p4) + g15*log(p1)*log(p5) + g21*log(p2)*log(p1) + g22*log(p2)*log(p2) + 
+                       g23*log(p2)*log(p3) + g24*log(p2)*log(p4) + g25*log(p2)*log(p5) + g31*log(p3)*log(p1) + g32*log(p3)*log(p2) + 
+                       g33*log(p3)*log(p3) + g34*log(p3)*log(p4) + g35*log(p3)*log(p5) + g41*log(p4)*log(p1) + g42*log(p4)*log(p2) + 
+                       g43*log(p4)*log(p3) + g44*log(p4)*log(p4) + g45*log(p4)*log(p5) + g51*log(p5)*log(p1) + g52*log(p5)*log(p2) + 
+                       g53*log(p5)*log(p3) + g54*log(p5)*log(p4) + g55*log(p5)*log(p5)))
+
+startvalues <- c(a1=0, g11=0, g12=0, g13=0, g14=0, g15=0, b1=0,
+                 a2=0, g21=0, g22=0, g23=0, g24=0, g25=0, b2=0,
+                 a3=0, g31=0, g32=0, g33=0, g34=0, g35=0, b3=0,
+                 a4=0, g41=0, g42=0, g43=0, g44=0, g45=0, b4=0,
+                 a5=0, g51=0, g52=0, g53=0, g54=0, g55=0, b5=0)
+#l1=0, l2=0, l3=0, l4=0, l5=0)
+
+fmodel <- list(fproduct1, fproduct2, fproduct3, fproduct4, fproduct5)
+ols_model <- nlsystemfit("OLS", fmodel, data=data, startvals=startvalues)
